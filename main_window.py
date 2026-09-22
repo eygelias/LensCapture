@@ -1,7 +1,9 @@
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QComboBox, QPushButton, QMessageBox
 import config
 
 class MainWindow(QMainWindow):
+    settings_saved = pyqtSignal()
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Configuración de LensCapture")
@@ -52,7 +54,8 @@ class MainWindow(QMainWindow):
         
         # Hotkey Info
         layout.addWidget(QLabel("Atajo de teclado (Ej: Ctrl+Shift+X):"))
-        from PyQt6.QtWidgets import QKeySequenceEdit, QCheckBox
+        from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QKeySequenceEdit, QCheckBox
         from PyQt6.QtGui import QKeySequence
         self.hotkey_input = QKeySequenceEdit()
         self.hotkey_input.setKeySequence(QKeySequence(self.cfg.get("hotkey", "Print")))
