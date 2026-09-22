@@ -506,7 +506,7 @@ class OverlayWindow(QWidget):
                 painter.setPen(pen)
                 painter.drawLine(self.draw_start_point, pos)
                 painter.end()
-            elif self.current_tool == Tool.BLUR:
+                if self.current_tool == Tool.BLUR:
                     r = QRect(self.draw_start_point, event.pos()).normalized()
                     rect = self._get_selection_rect()
                     r = r.intersected(rect)
