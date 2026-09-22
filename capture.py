@@ -216,7 +216,6 @@ class OverlayWindow(QWidget):
         font.setPixelSize(12)
         painter.setFont(font)
         
-        # Calculate horizontal action toolbar total width
         actions = [
             ("💾", QColor(45, 45, 45, 230), "btn_save_rect", 40),
             ("📋", QColor(45, 45, 45, 230), "btn_copy_rect", 40),
@@ -225,36 +224,26 @@ class OverlayWindow(QWidget):
             ("📄 Texto", QColor(0, 150, 100, 255), "btn_ocr_rect", 70),
             ("✨ Traducir", QColor(0, 150, 100, 255), "btn_translate_rect", 90),
         ]
-        
         total_w = sum(w + 5 for _, _, _, w in actions)
         
-        # --- Horizontal Action Toolbar (Bottom/Top) ---
-        toolbar_y = rect.bottom() + 5
-        if toolbar_y + 35 > self.height():
-            toolbar_y = rect.top() - 40
-            if toolbar_y < 0:
-                toolbar_y = 5 # force inside
+        # Determine HT (Horizontal Toolbar) rect
+        ht_w = total_w
+        ht_h = 35
+        ht_y = rect.bottom() + 5
+        if ht_y + ht_h > self.height() - 5:
+            ht_y = rect.top() - ht_h - 5
+            if ht_y < 5:
+                ht_y = 5
                 
-        # If the rect is too far left, move x_offset to the right so buttons are visible
-        x_offset = max(rect.right(), total_w + 5)
-        if x_offset > self.width():
-            x_offset = self.width() - 5
+        ht_x = rect.right() - ht_w
+        if ht_x < 5:
+            ht_x = 5
+        if ht_x + ht_w > self.width() - 5:
+            ht_x = self.width() - ht_w - 5
             
-        btn_h = 30
+        ht_rect = QRect(ht_x, ht_y, ht_w, ht_h)
         
-        for name, color, rect_name, btn_w in reversed(actions):
-            x_offset -= (btn_w + 5)
-            btn_rect = QRect(x_offset, toolbar_y, btn_w, btn_h)
-            setattr(self, rect_name, btn_rect)
-            painter.fillRect(btn_rect, color)
-            painter.setPen(Qt.GlobalColor.white)
-            
-            # Use a slightly bigger font for emojis
-            font.setPixelSize(14 if len(name) <= 2 else 12)
-            painter.setFont(font)
-            painter.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, name)
-            
-        # --- Vertical Drawing Toolbar (Right/Left) ---
+        # Determine VT (Vertical Toolbar) rect
         tools = [
             ("👆", Tool.SELECT, "btn_select_rect"),
             ("✏️", Tool.PENCIL, "btn_pencil_rect"),
@@ -265,29 +254,59 @@ class OverlayWindow(QWidget):
             ("💧", Tool.BLUR, "btn_blur_rect"),
             ("T", Tool.TEXT, "btn_text_rect"),
             ("↩️", None, "btn_undo_rect"),
-            ("🎨", "COLOR", "btn_color_rect"), # We'll handle color specially below
+            ("🎨", "COLOR", "btn_color_rect"),
         ]
+        rows, cols = 5, 2
+        vt_w = cols * 40
+        vt_h = rows * 40
         
-        # 2 columns, 5 rows
-        rows = 5
-        cols = 2
-        
-        tools_h = rows * 40
-        tools_w = cols * 40
-        y_offset_start = max(0, min(rect.top(), self.height() - tools_h))
-        
-        tools_x_start = rect.right() + 5
-        if tools_x_start + tools_w > self.width():
-            tools_x_start = rect.left() - tools_w - 5
-            if tools_x_start < 0:
-                tools_x_start = 5 # force inside
+        vt_x = rect.right() + 5
+        if vt_x + vt_w > self.width() - 5:
+            vt_x = rect.left() - vt_w - 5
+            if vt_x < 5:
+                vt_x = 5
                 
+        vt_y = rect.top()
+        if vt_y + vt_h > self.height() - 5:
+            vt_y = self.height() - vt_h - 5
+        if vt_y < 5:
+            vt_y = 5
+            
+        vt_rect = QRect(vt_x, vt_y, vt_w, vt_h)
+        
+        # Resolve overlap
+        if ht_rect.intersects(vt_rect):
+            # Try pushing VT to the right of HT
+            if ht_rect.right() + 5 + vt_w <= self.width() - 5:
+                vt_rect.moveLeft(ht_rect.right() + 5)
+            # Try pushing VT to the left of HT
+            elif ht_rect.left() - 5 - vt_w >= 5:
+                vt_rect.moveLeft(ht_rect.left() - 5 - vt_w)
+            # Try pushing VT below HT
+            elif ht_rect.bottom() + 5 + vt_h <= self.height() - 5:
+                vt_rect.moveTop(ht_rect.bottom() + 5)
+            # Try pushing VT above HT
+            elif ht_rect.top() - 5 - vt_h >= 5:
+                vt_rect.moveTop(ht_rect.top() - 5 - vt_h)
+                
+        # Draw HT
+        curr_x = ht_rect.left()
+        for name, color, rect_name, btn_w in actions:
+            btn_rect = QRect(curr_x, ht_rect.top(), btn_w, 30)
+            setattr(self, rect_name, btn_rect)
+            painter.fillRect(btn_rect, color)
+            painter.setPen(Qt.GlobalColor.white)
+            font.setPixelSize(14 if len(name) <= 2 else 12)
+            painter.setFont(font)
+            painter.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, name)
+            curr_x += btn_w + 5
+            
+        # Draw VT
         for i, (name, tid, rect_name) in enumerate(tools):
             col = i % cols
             row = i // cols
-            
-            x_pos = tools_x_start + (col * 40)
-            y_pos = y_offset_start + (row * 40)
+            x_pos = vt_rect.left() + (col * 40)
+            y_pos = vt_rect.top() + (row * 40)
             
             btn_rect = QRect(x_pos, y_pos, 35, 35)
             setattr(self, rect_name, btn_rect)
