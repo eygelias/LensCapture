@@ -1,27 +1,78 @@
-# LensCapture 🔍
+# 🔍 LensCapture
 
-LensCapture is a powerful screenshot utility powered by Google Lens. It allows you to quickly capture areas of your screen, edit them, extract text (OCR), and instantly translate them using Google Lens technology.
-
-## Características / Features
-
-- 🖱️ **Arrastrar y Seleccionar / Drag & Select:** Captura cualquier área de tu pantalla fácilmente.
-- ✍️ **Herramientas de Dibujo / Drawing Tools:** Lápiz, línea, flecha, rectángulo, texto, resaltador y desenfoque (blur).
-- 📋 **Extracción de Texto / OCR:** Copia texto de cualquier imagen directamente a tu portapapeles.
-- ✨ **Traducción Instantánea / Instant Translation:** Traduce cualquier texto en pantalla al instante respetando el fondo original.
-- 🔍 **Google Lens Integrado:** Abre la selección directamente en Google Lens para analizar objetos, códigos de barras o imágenes similares.
-- ⚙️ **Altamente Configurable:** Funciona como aplicación portable, inicia con Windows, atajos de teclado globales y modo silencioso.
-
-## Instalación / Installation
-
-1. Ve a [Releases](../../releases) y descarga la última versión. / Go to [Releases](../../releases) and download the latest version.
-2. Puedes usar el **Instalador** para añadirlo a tus programas, o la versión **Portable** (no requiere instalación). / Use the **Installer** for a full setup, or the **Portable** version (no installation required).
-3. Asegúrate de configurar un atajo de teclado en la aplicación. / Make sure to configure a hotkey in the settings.
-
-## Uso / Usage
-
-- Usa tu atajo de teclado (por defecto `Print Screen`) para iniciar una captura. / Use your hotkey (default `Print Screen`) to start a capture.
-- Dibuja sobre la captura y usa el menú contextual inferior para decidir qué acción tomar. / Draw on your capture and use the bottom toolbar to decide what to do.
+> **Herramienta de captura de pantalla potenciada por Google Lens para Windows**  
+> Captura, traduce, extrae texto y anota — sin necesidad de API Key.
 
 ---
 
-Desarrollado como una potente herramienta de productividad.
+## ✨ Características
+
+- 📸 **Captura instantánea** — Presiona `Print Screen` y selecciona el área
+- 🌐 **Traducción con Google Lens** — Traduce texto de cualquier imagen en pantalla
+- 📄 **Extracción de texto (OCR)** — Copia texto de imágenes al portapapeles
+- ✏️ **Herramientas de anotación** — Lápiz, flechas, rectángulos, resaltador, texto y más
+- 💧 **Efecto de desenfoque** — Difumina zonas sensibles antes de compartir
+- 📌 **Anclar capturas** — Mantén la captura visible sobre otras ventanas
+- 🔕 **Inicio silencioso** — Se inicia con Windows sin mostrar nada
+
+---
+
+## 📸 Capturas de Pantalla
+
+### Selección de área y herramientas
+![Interfaz principal](https://raw.githubusercontent.com/eygelias/LensCapture/main/docs/screenshots/screenshot1.jpg)
+
+### Anotaciones y herramientas de dibujo
+![Herramientas de dibujo](https://raw.githubusercontent.com/eygelias/LensCapture/main/docs/screenshots/screenshot2.jpg)
+
+### Resultado de traducción
+![Traducción en tiempo real](https://raw.githubusercontent.com/eygelias/LensCapture/main/docs/screenshots/screenshot3.jpg)
+
+---
+
+## 🚀 Instalación
+
+1. Ve a [**Releases**](https://github.com/eygelias/LensCapture/releases)
+2. Descarga `Instalador_LensCapture.exe`
+3. Ejecuta como administrador y sigue los pasos
+
+---
+
+## 🎮 Uso
+
+| Acción | Atajo |
+|--------|-------|
+| Activar captura | `Print Screen` (configurable) |
+| Cancelar | `Escape` |
+| Copiar imagen | `Ctrl + C` |
+| Guardar imagen | `Ctrl + S` |
+| Extraer texto | `Ctrl + Shift + C` |
+| Traducir | `Ctrl + T` |
+| Deshacer | `Ctrl + Z` |
+
+---
+
+## ⚙️ Configuración
+
+Clic derecho en el icono de la bandeja del sistema → **Configuración**
+
+- 🔑 Cambiar tecla de activación
+- 🌍 Cambiar idioma destino de traducción
+- 🔕 Activar/desactivar notificaciones
+- 🚀 Iniciar con Windows
+
+---
+
+## 🛠️ Tecnologías
+
+- Python 3 + PyQt6
+- Google Lens (sin API Key)
+- mss (captura de pantalla)
+- PIL/Pillow
+- PyInstaller (empaquetado)
+
+---
+
+## 📄 Licencia
+
+MIT License — libre para uso personal y comercial.
