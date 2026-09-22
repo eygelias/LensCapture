@@ -107,11 +107,12 @@ class InstallThread(QThread):
             winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "Ely")
             winreg.CloseKey(key)
             
-            # Run at startup
+            # Run at startup via Scheduled Tasks (Bypasses UAC)
             if self.run_at_startup:
-                run_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                winreg.SetValueEx(run_key, APP_NAME, 0, winreg.REG_SZ, f'"{target}"')
-                winreg.CloseKey(run_key)
+                import subprocess
+                task_name = "LensCapture_AutoStart"
+                cmd = f'schtasks /create /tn "{task_name}" /tr "\\"{target}\\"" /sc onlogon /rl highest /f'
+                subprocess.run(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 
             self.progress.emit(100)
             self.log.emit("¡Instalación completada!")
@@ -150,16 +151,25 @@ class UninstallThread(QThread):
                 winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, rf"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{APP_NAME}")
             except: pass
             
-            # Delete Startup entry
+            # Delete Startup entry (Scheduled Task)
+            try:
+                import subprocess
+                task_name = "LensCapture_AutoStart"
+                cmd = f'schtasks /delete /tn "{task_name}" /f'
+                subprocess.run(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            except: pass
+            
+            # Cleanup old registry keys if they exist
             try:
                 run_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
                 winreg.DeleteValue(run_key, APP_NAME)
                 winreg.CloseKey(run_key)
             except: pass
-            
-            self.progress.emit(70)
-            
-            # To delete the folder, we execute a cmd command that waits 2 seconds and deletes the folder, then exit.
+            try:
+                run_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+                winreg.DeleteValue(run_key, APP_NAME)
+                winreg.CloseKey(run_key)
+            except: pass
             import subprocess
             cmd = f'ping 127.0.0.1 -n 3 > nul & rmdir /s /q "{DEST_DIR}"'
             subprocess.Popen(cmd, shell=True)
