@@ -86,7 +86,14 @@ class AppController(QObject):
         # Setup native Windows hotkey
         self.hotkey_filter = Win32HotkeyFilter(self.on_hotkey)
         self.app.installNativeEventFilter(self.hotkey_filter)
-        
+        self.register_hotkey()
+        self.main_window.settings_saved.connect(self.register_hotkey)
+
+    def register_hotkey(self):
+        if getattr(self, "hotkey_registered", False):
+            ctypes.windll.user32.UnregisterHotKey(None, self.hotkey_id)
+            self.hotkey_registered = False
+
         cfg = config.load_config()
         hotkey_str = cfg.get("hotkey", "Print").lower()
         
@@ -98,18 +105,14 @@ class AppController(QObject):
         key_part = hotkey_str.split("+")[-1].strip()
         vk = self.VK_MAPPING.get(key_part, 0x2C) # default to print screen
         
-        # RegisterHotKey(HWND, id, modifiers, vk)
         user32 = ctypes.windll.user32
         success = user32.RegisterHotKey(None, self.hotkey_id, modifiers, vk)
         if success:
             self.hotkey_registered = True
         else:
-            QMessageBox.critical(
-                None, 
-                "Error de Teclado", 
-                f"No se pudo registrar la tecla '{hotkey_str}'.\n"
-                "Asegúrate de ejecutar la aplicación como Administrador.\n"
-                "O tal vez Lightshot/OneDrive ya está usando esa tecla. Cierra Lightshot y vuelve a intentarlo."
+            self.show_notification(
+                "Error de Teclado",
+                f"No se pudo registrar '{hotkey_str}'. Cierra otras apps (Lightshot, Recortes) y reinicia."
             )
 
     def on_hotkey(self):
