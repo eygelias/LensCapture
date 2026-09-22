@@ -69,9 +69,7 @@ class OverlayWindow(QWidget):
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setMouseTracking(True)
         
-        self.full_screenshot_path = os.path.join(os.environ.get('TEMP', ''), "temp_full.png")
         self._take_full_screenshot()
-        self.bg_pixmap = QPixmap(self.full_screenshot_path)
         
         self.setGeometry(QApplication.primaryScreen().virtualGeometry())
         
@@ -120,8 +118,9 @@ class OverlayWindow(QWidget):
         try:
             with mss.mss() as sct:
                 monitor = sct.monitors[0]
-                screenshot = sct.grab(monitor)
-                mss.tools.to_png(screenshot.rgb, screenshot.size, output=self.full_screenshot_path)
+                sct_img = sct.grab(monitor)
+                img = QImage(sct_img.bgra, sct_img.width, sct_img.height, sct_img.width * 4, QImage.Format.Format_ARGB32).copy()
+                self.bg_pixmap = QPixmap.fromImage(img)
         except Exception as e:
             print(f"Error in take_full_screenshot: {e}")
 
@@ -508,58 +507,17 @@ class OverlayWindow(QWidget):
                 painter.drawLine(self.draw_start_point, pos)
                 painter.end()
             elif self.current_tool == Tool.BLUR:
-                self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(self.temp_drawing_pixmap)
-                painter.fillRect(QRect(self.draw_start_point, pos).normalized(), QColor(0, 0, 0, 150))
-                painter.end()
-            self.update()
-
-    def _draw_pencil(self, pos):
-        painter = QPainter(self.temp_drawing_pixmap)
-        pen = QPen(self.current_color, 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
-        painter.setPen(pen)
-        painter.drawLine(self.draw_last_point, pos)
-        painter.end()
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if self.is_selecting:
-                self.end_point = event.pos()
-                self.is_selecting = False
-                rect = self._get_selection_rect()
-                if rect.width() > 10 and rect.height() > 10:
-                    self.selection_done = True
-                    self.set_tool(Tool.SELECT)
-                self.update()
-                
-                # Check for auto_translate after update so it draws the selection before freezing for processing
-                if self.selection_done and self.cfg.get("mode", "analysis") == "translation":
-                    QApplication.processEvents() # Let the UI paint the selection
-                    self._finish_action("translation")
-            elif getattr(self, "is_dragging", False):
-                self.is_dragging = False
-            elif self.is_drawing:
-                self.is_drawing = False
-                
-                if self.current_tool == Tool.BLUR:
-                    # Apply actual blur logic using PIL
                     r = QRect(self.draw_start_point, event.pos()).normalized()
                     rect = self._get_selection_rect()
-                    # Intersect to avoid blurring outside selection
                     r = r.intersected(rect)
                     if r.width() > 0 and r.height() > 0:
-                        # Grab image
-                        img_path = self.full_screenshot_path
                         try:
-                            pil_img = Image.open(img_path).crop((r.x(), r.y(), r.x()+r.width(), r.y()+r.height()))
-                            # Apply strong blur/pixelate
-                            pil_img = pil_img.resize((r.width() // 10 or 1, r.height() // 10 or 1), resample=Image.Resampling.BILINEAR)
-                            pil_img = pil_img.resize((r.width(), r.height()), Image.Resampling.NEAREST)
-                            temp_blur_path = os.path.join(os.environ.get('TEMP', ''), "temp_blur.png")
-                            pil_img.save(temp_blur_path)
+                            img = self.bg_pixmap.copy(r).toImage()
+                            scaled_down = img.scaled(max(1, r.width() // 10), max(1, r.height() // 10), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                            scaled_up = scaled_down.scaled(r.width(), r.height(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
                             
                             painter = QPainter(self.drawing_pixmap)
-                            painter.drawPixmap(r.topLeft(), QPixmap(temp_blur_path))
+                            painter.drawPixmap(r.topLeft(), QPixmap.fromImage(scaled_up))
                             painter.end()
                         except Exception as e:
                             print(f"Blur error: {e}")
