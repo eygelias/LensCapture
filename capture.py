@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QMessageBox,  QApplication, QWidget, QFileDialog, QTextEdit
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal, QSize
-from PyQt6.QtGui import QPainter, QColor, QPen, QPixmap, QScreen, QFont, QCursor, QPainterPath
+from PyQt6.QtGui import QPainter, QColor, QPen, QPixmap, QScreen, QFont, QCursor, QPainterPath, QImage
 import mss
 import mss.tools
 from PIL import Image, ImageFilter
@@ -127,7 +127,7 @@ class OverlayWindow(QWidget):
             err = traceback.format_exc()
             with open(os.path.join(os.environ.get('TEMP', ''), 'lens_capture_error.log'), 'a') as f:
                 f.write(err + chr(10))
-            QMessageBox.critical(None, "Error de Captura", f"No se pudo tomar la captura de pantalla:\\n{e}")
+            QMessageBox.critical(None, "Error de Captura", f"No se pudo tomar la captura de pantalla:\n{e}")
             self.bg_pixmap = QPixmap(QApplication.primaryScreen().virtualGeometry().size())
             self.bg_pixmap.fill(Qt.GlobalColor.black)
 
