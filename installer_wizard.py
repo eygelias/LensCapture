@@ -16,9 +16,10 @@ class InstallThread(QThread):
     log = pyqtSignal(str)
     finished = pyqtSignal(bool, str)
 
-    def __init__(self, run_at_startup):
+    def __init__(self, run_at_startup, config_data):
         super().__init__()
         self.run_at_startup = run_at_startup
+        self.config_data = config_data
 
     def run(self):
         try:
@@ -46,6 +47,12 @@ class InstallThread(QThread):
                 else:
                     shutil.copy2(s, d)
                 self.progress.emit(10 + int((i / total_items) * 40))
+
+            # Crear config.json
+            import json
+            config_path = os.path.join(DEST_DIR, "config.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(self.config_data, f, indent=4)
 
             # 2. Copy uninstaller
             shutil.copy2(sys.executable, os.path.join(DEST_DIR, "uninstall.exe"))
@@ -168,13 +175,7 @@ class InstallerWizard(QWizard):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Instalador de LensCapture")
-        self.setFixedSize(500, 350)
-        
-        self.setStyleSheet("""
-            QWizard { background-color: #f0f0f0; }
-            QLabel, QCheckBox { color: #000000; }
-            QWizardPage { background-color: #ffffff; }
-        """)
+        self.setFixedSize(500, 420)
         
         self.addPage(self.createWelcomePage())
         self.addPage(self.createOptionsPage())
@@ -195,18 +196,32 @@ class InstallerWizard(QWizard):
         return page
 
     def createOptionsPage(self):
+        from PyQt6.QtWidgets import QComboBox
         page = QWizardPage()
         page.setTitle("Opciones de Configuración")
         layout = QVBoxLayout()
         
-        self.cb_startup = QCheckBox("Ejecutar LensCapture al iniciar el sistema (Recomendado)")
+        # Opcion de inicio
+        self.cb_startup = QCheckBox("Ejecutar LensCapture al iniciar Windows (Recomendado)")
         self.cb_startup.setChecked(True)
         layout.addWidget(self.cb_startup)
         
-        info = QLabel("<br><br><b>Nota:</b> En el futuro podrás modificar estas opciones y otras "
-                      "(como silenciar notificaciones o cambiar de idioma) haciendo "
-                      "<b>clic en el botón de Configuración (❓ Ayuda)</b> dentro de la aplicación, "
-                      "o buscando LensCapture en tu menú inicio.")
+        # Opcion de notificaciones
+        self.cb_mute = QCheckBox("Silenciar notificaciones (No mostrar mensajes emergentes)")
+        self.cb_mute.setChecked(False)
+        layout.addWidget(self.cb_mute)
+        
+        # Opcion de idioma
+        layout.addWidget(QLabel("<br><b>Idioma destino para las traducciones:</b>"))
+        self.combo_lang = QComboBox()
+        self.combo_lang.addItems([
+            "Spanish", "English", "French", "German", "Italian",
+            "Portuguese", "Russian", "Japanese", "Korean", "Chinese"
+        ])
+        layout.addWidget(self.combo_lang)
+        
+        info = QLabel("<br><b>Nota:</b> En el futuro podrás modificar estas opciones haciendo "
+                      "<b>clic en el botón de Configuración (❓ Ayuda)</b> en el menú de la aplicación.")
         info.setWordWrap(True)
         layout.addWidget(info)
         
@@ -247,7 +262,16 @@ class InstallerWizard(QWizard):
             self.button(QWizard.WizardButton.NextButton).setEnabled(False)
             self.button(QWizard.WizardButton.CancelButton).setEnabled(False)
             
-            self.thread = InstallThread(self.cb_startup.isChecked())
+            # Recopilar configuracion
+            config_data = {
+                "mode": "analysis",
+                "target_language": self.combo_lang.currentText(),
+                "hotkey": "print screen",
+                "drawing_color": "#ff0000",
+                "mute_notifications": self.cb_mute.isChecked()
+            }
+            
+            self.thread = InstallThread(self.cb_startup.isChecked(), config_data)
             self.thread.progress.connect(self.progress.setValue)
             self.thread.log.connect(self.lbl_status.setText)
             self.thread.finished.connect(self.on_install_finished)
@@ -258,7 +282,7 @@ class InstallerWizard(QWizard):
             self.button(QWizard.WizardButton.NextButton).setEnabled(True)
             self.next()
         else:
-            QMessageBox.critical(self, "Error", f"Error durante la instalación:\n{error_msg}")
+            QMessageBox.critical(self, "Error", f"Error durante la instalación:\\n{error_msg}")
             self.button(QWizard.WizardButton.CancelButton).setEnabled(True)
 
     def accept(self):
@@ -272,12 +296,6 @@ class UninstallerWizard(QWizard):
         super().__init__()
         self.setWindowTitle("Desinstalar LensCapture")
         self.setFixedSize(500, 300)
-        
-        self.setStyleSheet("""
-            QWizard { background-color: #f0f0f0; }
-            QLabel, QCheckBox { color: #000000; }
-            QWizardPage { background-color: #ffffff; }
-        """)
         
         page = QWizardPage()
         page.setTitle("Desinstalando...")
@@ -308,11 +326,14 @@ class UninstallerWizard(QWizard):
             QMessageBox.information(self, "Desinstalación Completada", "LensCapture fue eliminado de su equipo.")
             sys.exit(0)
         else:
-            QMessageBox.critical(self, "Error", f"Error durante la desinstalación:\n{error_msg}")
+            QMessageBox.critical(self, "Error", f"Error durante la desinstalación:\\n{error_msg}")
             sys.exit(1)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # FORZAR ESTILO FUSION (SOLUCIONA EL MODO OSCURO)
+    app.setStyle("Fusion")
     
     if "--uninstall" in sys.argv:
         wizard = UninstallerWizard()
