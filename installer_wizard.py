@@ -5,7 +5,7 @@ import winreg
 import winshell
 from win32com.client import Dispatch
 from PyQt6.QtWidgets import (QApplication, QWizard, QWizardPage, QVBoxLayout, 
-                             QLabel, QCheckBox, QProgressBar, QMessageBox)
+                             QLabel, QCheckBox, QProgressBar, QMessageBox, QFrame)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 APP_NAME = "LensCapture"
@@ -180,29 +180,19 @@ DARK_STYLE = """
         color: #ffffff;
         background: transparent;
     }
-    QCheckBox, QRadioButton {
-        color: #ffffff;
+    QFrame[class="OptionBox"] {
         background-color: #333333;
         border: 1px solid #555555;
         border-radius: 6px;
-        padding: 10px;
     }
-    QCheckBox:hover, QRadioButton:hover {
+    QFrame[class="OptionBox"]:hover {
         background-color: #404040;
         border: 1px solid #777777;
     }
-    QCheckBox::indicator {
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-        border: 1px solid #666666;
-        background-color: #222222;
-        margin-right: 8px;
-    }
-    QCheckBox::indicator:checked {
-        background-color: #0078d7;
-        border: 1px solid #0078d7;
-        image: url(data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>);
+    QCheckBox {
+        color: #ffffff;
+        background: transparent;
+        font-size: 14px;
     }
     QPushButton {
         background-color: #3b3b3b;
@@ -283,14 +273,22 @@ class InstallerWizard(QWizard):
         layout = QVBoxLayout()
         
         # Opcion de inicio
+        frame1 = QFrame()
+        frame1.setProperty("class", "OptionBox")
+        lyt1 = QVBoxLayout(frame1)
         self.cb_startup = QCheckBox("Ejecutar LensCapture al iniciar Windows (Recomendado)")
         self.cb_startup.setChecked(True)
-        layout.addWidget(self.cb_startup)
+        lyt1.addWidget(self.cb_startup)
+        layout.addWidget(frame1)
         
         # Opcion de notificaciones
+        frame2 = QFrame()
+        frame2.setProperty("class", "OptionBox")
+        lyt2 = QVBoxLayout(frame2)
         self.cb_mute = QCheckBox("Silenciar notificaciones (No mostrar mensajes emergentes)")
         self.cb_mute.setChecked(False)
-        layout.addWidget(self.cb_mute)
+        lyt2.addWidget(self.cb_mute)
+        layout.addWidget(frame2)
         
         # Opcion de idioma
         layout.addWidget(QLabel("<br><b>Idioma destino para las traducciones:</b>"))
@@ -330,9 +328,13 @@ class InstallerWizard(QWizard):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("LensCapture se ha instalado correctamente en tu equipo."))
         
+        frame = QFrame()
+        frame.setProperty("class", "OptionBox")
+        lyt = QVBoxLayout(frame)
         self.cb_launch = QCheckBox("Abrir LensCapture ahora")
         self.cb_launch.setChecked(True)
-        layout.addWidget(self.cb_launch)
+        lyt.addWidget(self.cb_launch)
+        layout.addWidget(frame)
         
         page.setLayout(layout)
         return page
