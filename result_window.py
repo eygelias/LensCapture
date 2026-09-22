@@ -76,22 +76,42 @@ class ResultWindow(QWidget):
                 line_height = item.get("line_height", ymax - ymin)
                 line_h_px = int((line_height / 1000.0) * h)
                 
-                rect = QRect(x_px, y_px, w_px, h_px)
+                # The original bounding box of the text
+                original_rect = QRect(x_px, y_px, w_px, h_px)
                 
                 font = painter.font()
-                font.setPixelSize(max(12, int(line_h_px * 0.75)))
+                # Set font size relative to the detected line height
+                font_size = max(12, int(line_h_px * 0.75))
+                font.setPixelSize(font_size)
                 painter.setFont(font)
                 
                 fm = painter.fontMetrics()
                 
-                # ── Full-width stripe covers ALL original English text on that row ──
-                stripe_rect = QRect(0, y_px, w, h_px)
-                painter.fillRect(stripe_rect, QColor(0, 0, 0, 220))
+                max_draw_width = w - x_px - 5
+                if max_draw_width < 10:
+                    max_draw_width = 10
+                    
+                # Calculate the exact bounding rect needed for the translated text
+                text_bound_rect = fm.boundingRect(
+                    QRect(x_px, y_px, max_draw_width, 10000),
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap,
+                    translated
+                )
+                
+                # Create a background rect that covers both the original text and the new text
+                bg_rect = original_rect.united(text_bound_rect)
+                
+                # Add a little padding to the background
+                bg_rect.adjust(-4, -2, 4, 2)
+                
+                # Draw the background (solid dark color to hide original text)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QColor(25, 25, 25, 245))
+                painter.drawRoundedRect(bg_rect, 4, 4)
 
-                # Draw translated text left-aligned, starting at the original text's X position
-                text_draw_rect = QRect(x_px, y_px, w - x_px - 5, h_px)
+                # Draw the translated text
                 painter.setPen(Qt.GlobalColor.white)
-                painter.drawText(text_draw_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter | Qt.TextFlag.TextWordWrap, translated)
+                painter.drawText(text_bound_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap, translated)
             except Exception as e:
                 import logging
                 logging.error(f"Error drawing box: {e}")
