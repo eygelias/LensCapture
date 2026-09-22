@@ -1,6 +1,6 @@
 import sys
 import os
-from PyQt6.QtWidgets import QApplication, QWidget, QFileDialog, QTextEdit
+from PyQt6.QtWidgets import QMessageBox,  QApplication, QWidget, QFileDialog, QTextEdit
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal, QSize
 from PyQt6.QtGui import QPainter, QColor, QPen, QPixmap, QScreen, QFont, QCursor, QPainterPath
 import mss
@@ -119,10 +119,17 @@ class OverlayWindow(QWidget):
             with mss.mss() as sct:
                 monitor = sct.monitors[0]
                 sct_img = sct.grab(monitor)
-                img = QImage(sct_img.bgra, sct_img.width, sct_img.height, sct_img.width * 4, QImage.Format.Format_ARGB32).copy()
+                self._bgra_data = sct_img.bgra  # Keep a reference to prevent GC
+                img = QImage(self._bgra_data, sct_img.width, sct_img.height, sct_img.width * 4, QImage.Format.Format_ARGB32)
                 self.bg_pixmap = QPixmap.fromImage(img)
         except Exception as e:
-            print(f"Error in take_full_screenshot: {e}")
+            import traceback
+            err = traceback.format_exc()
+            with open(os.path.join(os.environ.get('TEMP', ''), 'lens_capture_error.log'), 'a') as f:
+                f.write(err + chr(10))
+            QMessageBox.critical(None, "Error de Captura", f"No se pudo tomar la captura de pantalla:\\n{e}")
+            self.bg_pixmap = QPixmap(QApplication.primaryScreen().virtualGeometry().size())
+            self.bg_pixmap.fill(Qt.GlobalColor.black)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
@@ -130,9 +137,11 @@ class OverlayWindow(QWidget):
                 self.active_text_editor.deleteLater()
                 self.active_text_editor = None
                 self.setFocus()
-                # Remove the undo state that was pushed when creating the text box
                 if self.undo_stack:
                     self.undo_stack.pop()
+            elif self.current_tool != Tool.SELECT:
+                self.set_tool(Tool.SELECT)
+                self.update()
             else:
                 self.capture_cancelled.emit()
                 self.close()
@@ -273,20 +282,20 @@ class OverlayWindow(QWidget):
             
         vt_rect = QRect(vt_x, vt_y, vt_w, vt_h)
         
-        # Resolve overlap
+        # Resolve overlap robustly
         if ht_rect.intersects(vt_rect):
-            # Try pushing VT to the right of HT
-            if ht_rect.right() + 5 + vt_w <= self.width() - 5:
-                vt_rect.moveLeft(ht_rect.right() + 5)
-            # Try pushing VT to the left of HT
-            elif ht_rect.left() - 5 - vt_w >= 5:
-                vt_rect.moveLeft(ht_rect.left() - 5 - vt_w)
-            # Try pushing VT below HT
-            elif ht_rect.bottom() + 5 + vt_h <= self.height() - 5:
-                vt_rect.moveTop(ht_rect.bottom() + 5)
-            # Try pushing VT above HT
-            elif ht_rect.top() - 5 - vt_h >= 5:
-                vt_rect.moveTop(ht_rect.top() - 5 - vt_h)
+            # If they overlap, it's usually because the selection is near the bottom-right.
+            # Easiest fix: move VT to the left side of the selection!
+            vt_x_alt = rect.left() - vt_w - 5
+            if vt_x_alt >= 5:
+                vt_rect.moveLeft(vt_x_alt)
+            else:
+                # If it doesn't fit on the left, push it above HT
+                vt_rect.moveTop(ht_rect.top() - vt_h - 5)
+                # If it still goes offscreen at top, push HT to the left
+                if vt_rect.top() < 5:
+                    vt_rect.moveTop(5)
+                    ht_rect.moveLeft(vt_rect.left() - ht_w - 5)
                 
         # Draw HT
         curr_x = ht_rect.left()
