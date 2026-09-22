@@ -176,9 +176,33 @@ DARK_STYLE = """
         background-color: #2b2b2b;
         color: #ffffff;
     }
-    QLabel, QCheckBox, QRadioButton {
+    QLabel {
         color: #ffffff;
         background: transparent;
+    }
+    QCheckBox, QRadioButton {
+        color: #ffffff;
+        background-color: #333333;
+        border: 1px solid #555555;
+        border-radius: 6px;
+        padding: 10px;
+    }
+    QCheckBox:hover, QRadioButton:hover {
+        background-color: #404040;
+        border: 1px solid #777777;
+    }
+    QCheckBox::indicator {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 1px solid #666666;
+        background-color: #222222;
+        margin-right: 8px;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #0078d7;
+        border: 1px solid #0078d7;
+        image: url(data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>);
     }
     QPushButton {
         background-color: #3b3b3b;
@@ -207,14 +231,18 @@ DARK_STYLE = """
         background-color: #0078d7;
     }
     QComboBox {
-        background-color: #3b3b3b;
+        background-color: #333333;
         color: #ffffff;
         border: 1px solid #555555;
-        padding: 4px;
-        border-radius: 4px;
+        padding: 8px;
+        border-radius: 6px;
+    }
+    QComboBox:hover {
+        background-color: #404040;
+        border: 1px solid #777777;
     }
     QComboBox QAbstractItemView {
-        background-color: #3b3b3b;
+        background-color: #333333;
         color: #ffffff;
         selection-background-color: #0078d7;
     }
@@ -321,7 +349,8 @@ class InstallerWizard(QWizard):
                 "target_language": self.combo_lang.currentText(),
                 "hotkey": "print screen",
                 "drawing_color": "#ff0000",
-                "mute_notifications": self.cb_mute.isChecked()
+                "mute_notifications": self.cb_mute.isChecked(),
+                "run_at_startup": self.cb_startup.isChecked()
             }
             
             self.thread = InstallThread(self.cb_startup.isChecked(), config_data)
