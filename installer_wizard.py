@@ -48,11 +48,15 @@ class InstallThread(QThread):
                     shutil.copy2(s, d)
                 self.progress.emit(10 + int((i / total_items) * 40))
 
-            # Crear config.json
+            # Crear config.json en APPDATA
             import json
-            config_path = os.path.join(DEST_DIR, "config.json")
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(self.config_data, f, indent=4)
+            appdata = os.getenv('APPDATA')
+            if appdata:
+                cfg_dir = os.path.join(appdata, "LensCapture")
+                os.makedirs(cfg_dir, exist_ok=True)
+                config_path = os.path.join(cfg_dir, "config.json")
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(self.config_data, f, indent=4)
 
             # 2. Copy uninstaller
             shutil.copy2(sys.executable, os.path.join(DEST_DIR, "uninstall.exe"))
