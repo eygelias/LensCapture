@@ -422,6 +422,50 @@ class OverlayWindow(QWidget):
             if self.current_tool == Tool.PENCIL:
                 self._draw_pencil(pos)
 
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.is_selecting:
+                self.end_point = event.pos()
+                self.is_selecting = False
+                rect = self._get_selection_rect()
+                if rect.width() > 5 and rect.height() > 5:
+                    self.selection_done = True
+                    self.setCursor(Qt.CursorShape.ArrowCursor)
+                else:
+                    # Too small, reset
+                    self.begin_point = QPoint()
+                    self.end_point = QPoint()
+                self.update()
+                return
+
+            if getattr(self, "is_dragging", False):
+                self.is_dragging = False
+                return
+
+            if self.is_drawing:
+                pos = event.pos()
+                if self.current_tool in (Tool.RECTANGLE, Tool.LINE, Tool.ARROW, Tool.HIGHLIGHT):
+                    painter = QPainter(self.drawing_pixmap)
+                    painter.drawPixmap(0, 0, self.temp_drawing_pixmap)
+                    painter.end()
+                    self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
+                elif self.current_tool == Tool.BLUR:
+                    r = QRect(self.draw_start_point, pos).normalized()
+                    rect = self._get_selection_rect()
+                    r = r.intersected(rect)
+                    if r.width() > 0 and r.height() > 0:
+                        try:
+                            img = self.bg_pixmap.copy(r).toImage()
+                            scaled_down = img.scaled(max(1, r.width() // 10), max(1, r.height() // 10), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                            scaled_up = scaled_down.scaled(r.width(), r.height(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
+                            painter = QPainter(self.drawing_pixmap)
+                            painter.drawPixmap(r.topLeft(), QPixmap.fromImage(scaled_up))
+                            painter.end()
+                        except Exception as e:
+                            print(f"Blur error: {e}")
+                self.is_drawing = False
+                self.update()
+
     def mouseMoveEvent(self, event):
         pos = event.pos()
         from PyQt6.QtWidgets import QToolTip
@@ -515,28 +559,21 @@ class OverlayWindow(QWidget):
                 painter.setPen(pen)
                 painter.drawLine(self.draw_start_point, pos)
                 painter.end()
-                if self.current_tool == Tool.BLUR:
-                    r = QRect(self.draw_start_point, event.pos()).normalized()
-                    rect = self._get_selection_rect()
-                    r = r.intersected(rect)
-                    if r.width() > 0 and r.height() > 0:
-                        try:
-                            img = self.bg_pixmap.copy(r).toImage()
-                            scaled_down = img.scaled(max(1, r.width() // 10), max(1, r.height() // 10), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                            scaled_up = scaled_down.scaled(r.width(), r.height(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
-                            
-                            painter = QPainter(self.drawing_pixmap)
-                            painter.drawPixmap(r.topLeft(), QPixmap.fromImage(scaled_up))
-                            painter.end()
-                        except Exception as e:
-                            print(f"Blur error: {e}")
-                else:
-                    painter = QPainter(self.drawing_pixmap)
-                    painter.drawPixmap(0, 0, self.temp_drawing_pixmap)
-                    painter.end()
-                    
-                self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
-                self.update()
+            elif self.current_tool == Tool.BLUR:
+                r = QRect(self.draw_start_point, pos).normalized()
+                rect = self._get_selection_rect()
+                r = r.intersected(rect)
+                if r.width() > 0 and r.height() > 0:
+                    try:
+                        img = self.bg_pixmap.copy(r).toImage()
+                        scaled_down = img.scaled(max(1, r.width() // 10), max(1, r.height() // 10), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                        scaled_up = scaled_down.scaled(r.width(), r.height(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
+                        painter2 = QPainter(self.temp_drawing_pixmap)
+                        painter2.drawPixmap(r.topLeft(), QPixmap.fromImage(scaled_up))
+                        painter2.end()
+                    except Exception as e:
+                        print(f"Blur error: {e}")
+            self.update()
 
     def _stamp_text_editor(self):
         if getattr(self, "active_text_editor", None):
