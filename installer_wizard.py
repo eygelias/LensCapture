@@ -54,19 +54,18 @@ class InstallThread(QThread):
             self.log.emit("Creando accesos directos...")
             shell = Dispatch('WScript.Shell')
             target = os.path.join(DEST_DIR, "LensCapture.exe")
-            icon = os.path.join(DEST_DIR, "icon.ico")
             
             # Desktop
-            desktop = winshell.desktop()
+            desktop = winshell.desktop(common=1)
             path = os.path.join(desktop, "LensCapture.lnk")
             shortcut = shell.CreateShortCut(path)
             shortcut.Targetpath = target
             shortcut.WorkingDirectory = DEST_DIR
-            shortcut.IconLocation = icon
+            shortcut.IconLocation = target
             shortcut.save()
             
             # Start Menu
-            start_menu = winshell.programs()
+            start_menu = winshell.programs(common=1)
             sm_folder = os.path.join(start_menu, APP_NAME)
             os.makedirs(sm_folder, exist_ok=True)
             
@@ -75,7 +74,7 @@ class InstallThread(QThread):
             shortcut = shell.CreateShortCut(path)
             shortcut.Targetpath = target
             shortcut.WorkingDirectory = DEST_DIR
-            shortcut.IconLocation = icon
+            shortcut.IconLocation = target
             shortcut.save()
             
             # Uninstall Shortcut
@@ -84,7 +83,7 @@ class InstallThread(QThread):
             shortcut.Targetpath = os.path.join(DEST_DIR, "uninstall.exe")
             shortcut.Arguments = "--uninstall"
             shortcut.WorkingDirectory = DEST_DIR
-            shortcut.IconLocation = icon
+            shortcut.IconLocation = os.path.join(DEST_DIR, "uninstall.exe")
             shortcut.save()
             
             self.progress.emit(70)
@@ -97,14 +96,14 @@ class InstallThread(QThread):
             key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, reg_path)
             winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, APP_NAME)
             winreg.SetValueEx(key, "UninstallString", 0, winreg.REG_SZ, f'"{os.path.join(DEST_DIR, "uninstall.exe")}" --uninstall')
-            winreg.SetValueEx(key, "DisplayIcon", 0, winreg.REG_SZ, icon)
+            winreg.SetValueEx(key, "DisplayIcon", 0, winreg.REG_SZ, target)
             winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "Ely")
             winreg.CloseKey(key)
             
             # Run at startup
             if self.run_at_startup:
-                run_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                winreg.SetValueEx(run_key, APP_NAME, 0, winreg.REG_SZ, target)
+                run_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+                winreg.SetValueEx(run_key, APP_NAME, 0, winreg.REG_SZ, f'"{target}"')
                 winreg.CloseKey(run_key)
                 
             self.progress.emit(100)
@@ -128,12 +127,12 @@ class UninstallThread(QThread):
             # or we rename it and delete the rest.
             
             # Delete Desktop shortcut
-            desktop = winshell.desktop()
+            desktop = winshell.desktop(common=1)
             path = os.path.join(desktop, "LensCapture.lnk")
             if os.path.exists(path): os.remove(path)
             
             # Delete Start Menu
-            start_menu = winshell.programs()
+            start_menu = winshell.programs(common=1)
             sm_folder = os.path.join(start_menu, APP_NAME)
             if os.path.exists(sm_folder): shutil.rmtree(sm_folder)
             
@@ -146,7 +145,7 @@ class UninstallThread(QThread):
             
             # Delete Startup entry
             try:
-                run_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+                run_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
                 winreg.DeleteValue(run_key, APP_NAME)
                 winreg.CloseKey(run_key)
             except: pass
@@ -170,6 +169,12 @@ class InstallerWizard(QWizard):
         super().__init__()
         self.setWindowTitle("Instalador de LensCapture")
         self.setFixedSize(500, 350)
+        
+        self.setStyleSheet("""
+            QWizard { background-color: #f0f0f0; }
+            QLabel, QCheckBox { color: #000000; }
+            QWizardPage { background-color: #ffffff; }
+        """)
         
         self.addPage(self.createWelcomePage())
         self.addPage(self.createOptionsPage())
@@ -259,7 +264,7 @@ class InstallerWizard(QWizard):
     def accept(self):
         if self.cb_launch.isChecked():
             import subprocess
-            subprocess.Popen([os.path.join(DEST_DIR, "LensCapture.exe")])
+            subprocess.Popen([os.path.join(DEST_DIR, "LensCapture.exe")], cwd=DEST_DIR)
         super().accept()
 
 class UninstallerWizard(QWizard):
@@ -267,6 +272,12 @@ class UninstallerWizard(QWizard):
         super().__init__()
         self.setWindowTitle("Desinstalar LensCapture")
         self.setFixedSize(500, 300)
+        
+        self.setStyleSheet("""
+            QWizard { background-color: #f0f0f0; }
+            QLabel, QCheckBox { color: #000000; }
+            QWizardPage { background-color: #ffffff; }
+        """)
         
         page = QWizardPage()
         page.setTitle("Desinstalando...")
