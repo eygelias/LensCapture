@@ -106,23 +106,34 @@ class MainWindow(QMainWindow):
         self.cfg["mute_notifications"] = self.mute_cb.isChecked()
         self.cfg["run_at_startup"] = self.startup_cb.isChecked()
         
-        # Handle registry for startup
-        import winreg
+        # Handle auto-start via Scheduled Tasks (Bypasses UAC)
+        import subprocess
         import sys
-        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        import winreg
+        
+        task_name = "LensCapture_AutoStart"
         try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
             if self.cfg["run_at_startup"]:
-                winreg.SetValueEx(key, "LensCapture", 0, winreg.REG_SZ, sys.executable)
+                cmd = f'schtasks /create /tn "{task_name}" /tr "\\"{sys.executable}\\"" /sc onlogon /rl highest /f'
+                subprocess.run(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             else:
-                try:
-                    winreg.DeleteValue(key, "LensCapture")
-                except FileNotFoundError:
-                    pass
-            winreg.CloseKey(key)
+                cmd = f'schtasks /delete /tn "{task_name}" /f'
+                subprocess.run(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except Exception as e:
-            print(f"Error setting registry: {e}")
+            print(f"Error setting scheduled task: {e}")
             
+        # Cleanup old registry keys if they exist (from previous versions)
+        try:
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+            winreg.DeleteValue(key, "LensCapture")
+            winreg.CloseKey(key)
+        except: pass
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+            winreg.DeleteValue(key, "LensCapture")
+            winreg.CloseKey(key)
+        except: pass
+
         config.save_config(self.cfg)
         QMessageBox.information(self, "Guardado", "Configuración guardada correctamente.\n\nLa aplicación se reiniciará para aplicar los cambios.")
         import os
