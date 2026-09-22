@@ -54,8 +54,7 @@ class MainWindow(QMainWindow):
         
         # Hotkey Info
         layout.addWidget(QLabel("Atajo de teclado (Ej: Ctrl+Shift+X):"))
-        from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QKeySequenceEdit, QCheckBox
+        from PyQt6.QtWidgets import QKeySequenceEdit, QCheckBox
         from PyQt6.QtGui import QKeySequence
         self.hotkey_input = QKeySequenceEdit()
         self.hotkey_input.setKeySequence(QKeySequence(self.cfg.get("hotkey", "Print")))
