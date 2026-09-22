@@ -79,8 +79,6 @@ class AppController(QObject):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
         
-        self.tray_icon.showMessage("LensCapture", "Corriendo en segundo plano. Presiona tu atajo para capturar.")
-        
         self.trigger_capture_signal.connect(self.do_capture)
         self.current_overlay = None
         self.result_windows = []
