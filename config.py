@@ -1,7 +1,15 @@
 import json
 import os
 
-CONFIG_FILE = "config.json"
+def get_config_path():
+    appdata = os.getenv('APPDATA')
+    if appdata:
+        cfg_dir = os.path.join(appdata, "LensCapture")
+        os.makedirs(cfg_dir, exist_ok=True)
+        return os.path.join(cfg_dir, "config.json")
+    return "config.json"
+
+CONFIG_FILE = get_config_path()
 
 DEFAULT_CONFIG = {
     "mode": "analysis",  # "translation" or "analysis"
