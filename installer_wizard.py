@@ -171,11 +171,64 @@ class UninstallThread(QThread):
         except Exception as e:
             self.finished.emit(False, str(e))
 
+DARK_STYLE = """
+    QWizard, QWizardPage, QWidget {
+        background-color: #2b2b2b;
+        color: #ffffff;
+    }
+    QLabel, QCheckBox, QRadioButton {
+        color: #ffffff;
+        background: transparent;
+    }
+    QPushButton {
+        background-color: #3b3b3b;
+        color: #ffffff;
+        border: 1px solid #555555;
+        padding: 6px 15px;
+        border-radius: 4px;
+        min-width: 80px;
+    }
+    QPushButton:hover {
+        background-color: #4b4b4b;
+    }
+    QPushButton:disabled {
+        background-color: #2b2b2b;
+        color: #666666;
+        border: 1px solid #444444;
+    }
+    QProgressBar {
+        border: 1px solid #555555;
+        border-radius: 4px;
+        text-align: center;
+        background-color: #1e1e1e;
+        color: white;
+    }
+    QProgressBar::chunk {
+        background-color: #0078d7;
+    }
+    QComboBox {
+        background-color: #3b3b3b;
+        color: #ffffff;
+        border: 1px solid #555555;
+        padding: 4px;
+        border-radius: 4px;
+    }
+    QComboBox QAbstractItemView {
+        background-color: #3b3b3b;
+        color: #ffffff;
+        selection-background-color: #0078d7;
+    }
+"""
+
 class InstallerWizard(QWizard):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Instalador de LensCapture")
         self.setFixedSize(500, 420)
+        self.setStyleSheet(DARK_STYLE)
+        
+        # Ocultar la barra gris claro por defecto de QWizard en Windows
+        self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
         
         self.addPage(self.createWelcomePage())
         self.addPage(self.createOptionsPage())
@@ -296,6 +349,8 @@ class UninstallerWizard(QWizard):
         super().__init__()
         self.setWindowTitle("Desinstalar LensCapture")
         self.setFixedSize(500, 300)
+        self.setStyleSheet(DARK_STYLE)
+        self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
         
         page = QWizardPage()
         page.setTitle("Desinstalando...")
