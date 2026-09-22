@@ -36,6 +36,14 @@ class DraggableTextEdit(QTextEdit):
     def mouseReleaseEvent(self, event):
         self.is_dragging = False
         super().mouseReleaseEvent(event)
+        
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            # Let the parent handle it to close the text box
+            if self.parent():
+                self.parent().keyPressEvent(event)
+        else:
+            super().keyPressEvent(event)
 
 class Tool:
     SELECT = 0
@@ -119,8 +127,16 @@ class OverlayWindow(QWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
-            self.capture_cancelled.emit()
-            self.close()
+            if getattr(self, "active_text_editor", None):
+                self.active_text_editor.deleteLater()
+                self.active_text_editor = None
+                self.setFocus()
+                # Remove the undo state that was pushed when creating the text box
+                if self.undo_stack:
+                    self.undo_stack.pop()
+            else:
+                self.capture_cancelled.emit()
+                self.close()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Z:
                 self._undo()
