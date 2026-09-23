@@ -431,6 +431,9 @@ class OverlayWindow(QWidget):
                 if rect.width() > 5 and rect.height() > 5:
                     self.selection_done = True
                     self.setCursor(Qt.CursorShape.ArrowCursor)
+                    if getattr(self, "auto_translate", False):
+                        self._finish_action(self.cfg.get("mode", "translation"))
+                        return
                 else:
                     # Too small, reset
                     self.begin_point = QPoint()
