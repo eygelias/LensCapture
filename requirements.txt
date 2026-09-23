@@ -1,0 +1,8 @@
+﻿PyQt6==6.7.1
+google-genai
+keyboard
+pillow
+requests
+pyinstaller
+winshell
+pypiwin32
