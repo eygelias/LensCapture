@@ -42,6 +42,12 @@ class DraggableTextEdit(QTextEdit):
             # Let the parent handle it to close the text box
             if self.parent():
                 self.parent().keyPressEvent(event)
+        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                super().keyPressEvent(event)
+            else:
+                if hasattr(self.parent(), "_stamp_text_editor"):
+                    self.parent()._stamp_text_editor()
         else:
             super().keyPressEvent(event)
 
