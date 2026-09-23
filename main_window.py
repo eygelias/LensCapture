@@ -68,10 +68,6 @@ class MainWindow(QMainWindow):
         hotkey_layout.addWidget(btn_print)
         layout.addLayout(hotkey_layout)
         
-        # Auto Process
-        self.auto_process_cb = QCheckBox("⚡ Procesar rápido al soltar el clic (Sin dibujar)")
-        self.auto_process_cb.setChecked(self.cfg.get("auto_translate", False))
-        layout.addWidget(self.auto_process_cb)
         
         # Mute Notifications
         self.mute_cb = QCheckBox("Silenciar notificaciones")
@@ -120,7 +116,6 @@ class MainWindow(QMainWindow):
         self.cfg["hotkey"] = self.hotkey_input.keySequence().toString()
         self.cfg["mute_notifications"] = self.mute_cb.isChecked()
         self.cfg["run_at_startup"] = self.startup_cb.isChecked()
-        self.cfg["auto_translate"] = self.auto_process_cb.isChecked()
         
         # Handle auto-start via Scheduled Tasks (Bypasses UAC)
         import subprocess
