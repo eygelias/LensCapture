@@ -52,13 +52,26 @@ class MainWindow(QMainWindow):
             self.lang_combo.setCurrentIndex(lang_idx)
         layout.addWidget(self.lang_combo)
         
-        # Hotkey Info
+                # Hotkey Info
         layout.addWidget(QLabel("Atajo de teclado (Ej: Ctrl+Shift+X):"))
-        from PyQt6.QtWidgets import QKeySequenceEdit, QCheckBox
+        from PyQt6.QtWidgets import QKeySequenceEdit, QCheckBox, QHBoxLayout
         from PyQt6.QtGui import QKeySequence
+        
+        hotkey_layout = QHBoxLayout()
         self.hotkey_input = QKeySequenceEdit()
         self.hotkey_input.setKeySequence(QKeySequence(self.cfg.get("hotkey", "Print")))
-        layout.addWidget(self.hotkey_input)
+        hotkey_layout.addWidget(self.hotkey_input)
+        
+        btn_print = QPushButton("Restaurar Print")
+        btn_print.setToolTip("Restaurar tecla de Imprimir Pantalla")
+        btn_print.clicked.connect(lambda: self.hotkey_input.setKeySequence(QKeySequence("Print")))
+        hotkey_layout.addWidget(btn_print)
+        layout.addLayout(hotkey_layout)
+        
+        # Auto Process
+        self.auto_process_cb = QCheckBox("⚡ Procesar rápido al soltar el clic (Sin dibujar)")
+        self.auto_process_cb.setChecked(self.cfg.get("auto_translate", False))
+        layout.addWidget(self.auto_process_cb)
         
         # Mute Notifications
         self.mute_cb = QCheckBox("Silenciar notificaciones")
@@ -107,6 +120,7 @@ class MainWindow(QMainWindow):
         self.cfg["hotkey"] = self.hotkey_input.keySequence().toString()
         self.cfg["mute_notifications"] = self.mute_cb.isChecked()
         self.cfg["run_at_startup"] = self.startup_cb.isChecked()
+        self.cfg["auto_translate"] = self.auto_process_cb.isChecked()
         
         # Handle auto-start via Scheduled Tasks (Bypasses UAC)
         import subprocess
