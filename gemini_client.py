@@ -47,17 +47,20 @@ LANGUAGE_MAP = {
     "Xhosa": "xh", "Yiddish": "yi", "Yoruba": "yo", "Zulu": "zu"
 }
 
-def analyze_image(image_path, mode="translation", target_language="Spanish"):
+def analyze_image(image_path, mode="translation", target_language="Spanish", source_language="English"):
 
     async def _do_request():
         async with LensAPI() as lens:
             if mode == "translation":
                 lang_code = LANGUAGE_MAP.get(target_language, "es")
-                result = await lens.process_image(
-                    image_path,
-                    target_translation_language=lang_code,
-                    output_format="lines"
-                )
+                kwargs = {
+                    "target_translation_language": lang_code,
+                    "output_format": "lines"
+                }
+                if source_language and source_language != "Auto":
+                    kwargs["source_translation_language"] = LANGUAGE_MAP.get(source_language, "en")
+                
+                result = await lens.process_image(image_path, **kwargs)
                 return result
 
             elif mode == "ocr":
