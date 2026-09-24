@@ -57,59 +57,79 @@ class ResultWindow(QWidget):
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Traduciendo...")
             return
             
-        # Draw translations
-        for item in self.json_data:
+        try:
+            sorted_data = sorted(self.json_data, key=lambda item: (item.get("box", [0,0,0,0])[0], item.get("box", [0,0,0,0])[1]))
+        except Exception:
+            sorted_data = self.json_data
+
+        w = self.width()
+        h = self.height()
+
+        # PASS 1: Draw masking backgrounds for original text
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(25, 25, 25, 245))
+        for item in sorted_data:
             try:
-                box = item["box"] # [ymin, xmin, ymax, xmax] 0-1000
-                translated = item["translated"]
-                
+                box = item["box"]
                 ymin, xmin, ymax, xmax = box
-                
-                w = self.width()
-                h = self.height()
-                
                 x_px = int((xmin / 1000.0) * w)
                 y_px = int((ymin / 1000.0) * h)
                 w_px = int(((xmax - xmin) / 1000.0) * w)
                 h_px = int(((ymax - ymin) / 1000.0) * h)
+                original_rect = QRect(x_px, y_px, w_px, h_px)
+                original_rect.adjust(-4, -2, 4, 2)
+                painter.drawRoundedRect(original_rect, 4, 4)
+            except Exception:
+                pass
+
+        # PASS 2: Draw translated text with collision resolution
+        drawn_text_rects = []
+        for item in sorted_data:
+            try:
+                box = item["box"]
+                translated = item["translated"]
+                
+                ymin, xmin, ymax, xmax = box
+                x_px = int((xmin / 1000.0) * w)
+                y_px = int((ymin / 1000.0) * h)
                 
                 line_height = item.get("line_height", ymax - ymin)
                 line_h_px = int((line_height / 1000.0) * h)
                 
-                # The original bounding box of the text
-                original_rect = QRect(x_px, y_px, w_px, h_px)
-                
                 font = painter.font()
-                # Set font size relative to the detected line height
                 font_size = max(12, int(line_h_px * 0.75))
                 font.setPixelSize(font_size)
                 painter.setFont(font)
-                
                 fm = painter.fontMetrics()
                 
                 max_draw_width = w - x_px - 5
                 if max_draw_width < 10:
                     max_draw_width = 10
                     
-                # Calculate the exact bounding rect needed for the translated text
-                text_bound_rect = fm.boundingRect(
-                    QRect(x_px, y_px, max_draw_width, 10000),
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap,
-                    translated
-                )
+                current_y = y_px
                 
-                # Create a background rect that covers both the original text and the new text
-                bg_rect = original_rect.united(text_bound_rect)
+                # Collision resolution loop
+                while True:
+                    text_bound_rect = fm.boundingRect(
+                        QRect(x_px, current_y, max_draw_width, 10000),
+                        Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap,
+                        translated
+                    )
+                    padded_rect = text_bound_rect.adjusted(-4, -2, 4, 2)
+                    
+                    intersecting = [r for r in drawn_text_rects if padded_rect.intersects(r)]
+                    if not intersecting:
+                        break
+                    
+                    shift = max(r.bottom() for r in intersecting) - padded_rect.top() + 2
+                    current_y += shift
                 
-                # Add a little padding to the background
-                bg_rect.adjust(-4, -2, 4, 2)
+                drawn_text_rects.append(padded_rect)
                 
-                # Draw the background (solid dark color to hide original text)
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.setBrush(QColor(25, 25, 25, 245))
-                painter.drawRoundedRect(bg_rect, 4, 4)
-
-                # Draw the translated text
+                painter.drawRoundedRect(padded_rect, 4, 4)
+                
                 painter.setPen(Qt.GlobalColor.white)
                 painter.drawText(text_bound_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap, translated)
             except Exception as e:
