@@ -40,8 +40,22 @@ class MainWindow(QMainWindow):
             self.mode_combo.setCurrentIndex(idx)
         layout.addWidget(self.mode_combo)
         
+        # Source Language
+        layout.addWidget(QLabel("Idioma Origen (Auto por defecto):"))
+        self.source_lang_combo = QComboBox()
+        self.source_lang_combo.addItem("Auto")
+        import gemini_client
+        for lang_name in sorted(gemini_client.LANGUAGE_MAP.keys()):
+            self.source_lang_combo.addItem(lang_name)
+            
+        src_lang = self.cfg.get("source_language", "English")
+        src_idx = self.source_lang_combo.findText(src_lang)
+        if src_idx >= 0:
+            self.source_lang_combo.setCurrentIndex(src_idx)
+        layout.addWidget(self.source_lang_combo)
+
         # Target Language
-        layout.addWidget(QLabel("Idioma Destino (para Traducción):"))
+        layout.addWidget(QLabel("Idioma Destino (para Traduccin):"))
         self.lang_combo = QComboBox()
         import gemini_client
         for lang_name in sorted(gemini_client.LANGUAGE_MAP.keys()):
@@ -112,6 +126,7 @@ class MainWindow(QMainWindow):
     def save_settings(self):
         self.cfg["api_key"] = ""  # No longer needed
         self.cfg["mode"] = self.mode_combo.currentData()
+        self.cfg["source_language"] = self.source_lang_combo.currentText()
         self.cfg["target_language"] = self.lang_combo.currentText()
         self.cfg["hotkey"] = self.hotkey_input.keySequence().toString()
         self.cfg["mute_notifications"] = self.mute_cb.isChecked()
