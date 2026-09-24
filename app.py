@@ -181,7 +181,7 @@ class AppController(QObject):
                     import json
                     cfg = config.load_config()
                     try:
-                        result = gemini_client.analyze_image(image_path, "ocr", cfg.get("target_language", "Spanish"))
+                        result = gemini_client.analyze_image(image_path, "ocr", cfg.get("target_language", "Spanish"), cfg.get("source_language", "English"))
                         self.finished.emit(result)
                     except Exception as e:
                         self.finished.emit("")
@@ -210,7 +210,7 @@ class AppController(QObject):
             def run(self):
                 import gemini_client
                 try:
-                    result_text = gemini_client.analyze_image(image_path, mode, cfg.get("target_language", "Spanish"))
+                    result_text = gemini_client.analyze_image(image_path, mode, cfg.get("target_language", "Spanish"), cfg.get("source_language", "English"))
                 except Exception as e:
                     result_text = f"Error: {e}"
                 self.finished.emit(result_text)
