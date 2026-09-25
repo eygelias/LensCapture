@@ -9,14 +9,28 @@ from PIL import Image, ImageFilter
 import config
 
 class DraggableTextEdit(QTextEdit):
-    def __init__(self, parent=None, color=QColor(255, 0, 0)):
+    def __init__(self, parent=None, color=QColor(255, 0, 0), font_size=24):
         super().__init__(parent)
-        self.setStyleSheet(f"background: transparent; color: {color.name()}; border: 1px dashed gray; font-size: 24px; font-family: Arial;")
+        self.current_color = color
+        self.setStyleSheet(f"background: transparent; color: {color.name()}; border: 1px dashed gray; font-size: {font_size}px; font-family: Arial;")
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.document().documentLayout().documentSizeChanged.connect(self.adjust_size)
         self.is_dragging = False
         self.drag_pos = QPoint()
+
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y()
+        font = self.font()
+        size = font.pixelSize()
+        if size <= 0: size = 24
+        if delta > 0: size += 2
+        else: size -= 2
+        size = max(8, min(size, 150))
+        self.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {size}px; font-family: Arial;")
+        if self.parent() and hasattr(self.parent(), "tool_sizes"):
+            self.parent().tool_sizes[self.parent().current_tool] = size
+        event.accept()
 
     def adjust_size(self, size):
         self.resize(int(size.width()) + 20, int(size.height()) + 10)
@@ -26,6 +40,31 @@ class DraggableTextEdit(QTextEdit):
             self.is_dragging = True
             self.drag_pos = event.pos()
         super().mousePressEvent(event)
+
+    def wheelEvent(self, event):
+        if hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
+            delta = event.angleDelta().y()
+            current_size = self.tool_sizes[self.current_tool]
+            
+            if delta > 0:
+                current_size += max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
+            else:
+                current_size -= max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
+                
+            min_size = 1
+            if self.current_tool == Tool.TEXT: min_size = 8
+            if self.current_tool == Tool.HIGHLIGHT: min_size = 5
+            
+            self.tool_sizes[self.current_tool] = max(min_size, min(current_size, 150))
+            
+            if self.current_tool == Tool.TEXT and getattr(self, "active_text_editor", None):
+                editor = self.active_text_editor
+                font = editor.font()
+                font.setPixelSize(self.tool_sizes[Tool.TEXT])
+                editor.setFont(font)
+                editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
+                
+            self.update()
 
     def mouseMoveEvent(self, event):
         if getattr(self, "is_dragging", False):
@@ -91,6 +130,14 @@ class OverlayWindow(QWidget):
         
         self.current_tool = Tool.SELECT
         self.current_color = QColor(self.cfg.get("drawing_color", "#ff0000"))
+        self.tool_sizes = {
+            Tool.PENCIL: 3,
+            Tool.RECTANGLE: 3,
+            Tool.LINE: 3,
+            Tool.ARROW: 3,
+            Tool.HIGHLIGHT: 20,
+            Tool.TEXT: 24
+        }
         
         self.is_drawing = False
         self.is_dragging = False
@@ -151,6 +198,33 @@ class OverlayWindow(QWidget):
             else:
                 self.capture_cancelled.emit()
                 self.close()
+        elif event.key() in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
+            if hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
+                current_size = self.tool_sizes[self.current_tool]
+                current_size += max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
+                self.tool_sizes[self.current_tool] = min(current_size, 150)
+                if self.current_tool == Tool.TEXT and getattr(self, "active_text_editor", None):
+                    editor = self.active_text_editor
+                    font = editor.font()
+                    font.setPixelSize(self.tool_sizes[Tool.TEXT])
+                    editor.setFont(font)
+                    editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
+                self.update()
+        elif event.key() == Qt.Key.Key_Minus:
+            if hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
+                current_size = self.tool_sizes[self.current_tool]
+                current_size -= max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
+                min_size = 1
+                if self.current_tool == Tool.TEXT: min_size = 8
+                if self.current_tool == Tool.HIGHLIGHT: min_size = 5
+                self.tool_sizes[self.current_tool] = max(min_size, current_size)
+                if self.current_tool == Tool.TEXT and getattr(self, "active_text_editor", None):
+                    editor = self.active_text_editor
+                    font = editor.font()
+                    font.setPixelSize(self.tool_sizes[Tool.TEXT])
+                    editor.setFont(font)
+                    editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
+                self.update()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Z:
                 self._undo()
@@ -226,7 +300,7 @@ class OverlayWindow(QWidget):
 
     def _draw_pencil(self, pos):
         painter = QPainter(self.drawing_pixmap)
-        pen = QPen(self.current_color, 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+        pen = QPen(self.current_color, self.tool_sizes.get(Tool.PENCIL, 3), Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
         painter.drawLine(self.draw_last_point, pos)
         painter.end()
@@ -420,7 +494,7 @@ class OverlayWindow(QWidget):
                     self._stamp_text_editor()
                 
                 self._push_undo() # just in case, wait, only push when text is stamped
-                self.active_text_editor = DraggableTextEdit(self, self.current_color)
+                self.active_text_editor = DraggableTextEdit(self, self.current_color, self.tool_sizes.get(Tool.TEXT, 24))
                 self.active_text_editor.move(pos)
                 self.active_text_editor.show()
                 self.active_text_editor.setFocus()
@@ -543,7 +617,7 @@ class OverlayWindow(QWidget):
             elif self.current_tool == Tool.RECTANGLE:
                 self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(self.temp_drawing_pixmap)
-                pen = QPen(self.current_color, 3, Qt.PenStyle.SolidLine)
+                pen = QPen(self.current_color, self.tool_sizes.get(self.current_tool, 3), Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
                 painter.setPen(pen)
                 r = QRect(self.draw_start_point, pos).normalized()
                 painter.drawRect(r)
@@ -551,27 +625,28 @@ class OverlayWindow(QWidget):
             elif self.current_tool == Tool.LINE:
                 self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(self.temp_drawing_pixmap)
-                pen = QPen(self.current_color, 3, Qt.PenStyle.SolidLine)
+                pen = QPen(self.current_color, self.tool_sizes.get(self.current_tool, 3), Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
                 painter.setPen(pen)
                 painter.drawLine(self.draw_start_point, pos)
                 painter.end()
             elif self.current_tool == Tool.ARROW:
                 self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(self.temp_drawing_pixmap)
-                pen = QPen(self.current_color, 3, Qt.PenStyle.SolidLine)
+                pen = QPen(self.current_color, self.tool_sizes.get(self.current_tool, 3), Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
                 painter.setPen(pen)
                 painter.drawLine(self.draw_start_point, pos)
                 import math
                 angle = math.atan2(pos.y() - self.draw_start_point.y(), pos.x() - self.draw_start_point.x())
-                painter.drawLine(pos, QPoint(int(pos.x() - 15 * math.cos(angle - math.pi/6)), int(pos.y() - 15 * math.sin(angle - math.pi/6))))
-                painter.drawLine(pos, QPoint(int(pos.x() - 15 * math.cos(angle + math.pi/6)), int(pos.y() - 15 * math.sin(angle + math.pi/6))))
+                arrow_size = max(15, self.tool_sizes.get(Tool.ARROW, 3) * 4)
+                painter.drawLine(pos, QPoint(int(pos.x() - arrow_size * math.cos(angle - math.pi/6)), int(pos.y() - arrow_size * math.sin(angle - math.pi/6))))
+                painter.drawLine(pos, QPoint(int(pos.x() - arrow_size * math.cos(angle + math.pi/6)), int(pos.y() - arrow_size * math.sin(angle + math.pi/6))))
                 painter.end()
             elif self.current_tool == Tool.HIGHLIGHT:
                 self.temp_drawing_pixmap.fill(Qt.GlobalColor.transparent)
                 painter = QPainter(self.temp_drawing_pixmap)
                 color = QColor(self.current_color)
                 color.setAlpha(100)
-                pen = QPen(color, 20, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+                pen = QPen(color, self.tool_sizes.get(Tool.HIGHLIGHT, 20), Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
                 painter.setPen(pen)
                 painter.drawLine(self.draw_start_point, pos)
                 painter.end()
@@ -600,7 +675,7 @@ class OverlayWindow(QWidget):
                 painter = QPainter(self.drawing_pixmap)
                 painter.setPen(QPen(self.current_color))
                 font = painter.font()
-                font.setPixelSize(24)
+                font.setPixelSize(self.tool_sizes.get(Tool.TEXT, 24))
                 font.setFamily("Arial")
                 painter.setFont(font)
                 
