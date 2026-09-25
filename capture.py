@@ -93,6 +93,10 @@ class OverlayWindow(QWidget):
         
         self.setGeometry(QApplication.primaryScreen().virtualGeometry())
         
+        # Pre-warm fonts and QPainter so first toolbar render is instant
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(50, self._warmup_render)
+        
         self.begin_point = QPoint()
         self.end_point = QPoint()
         self.is_selecting = False
@@ -107,7 +111,7 @@ class OverlayWindow(QWidget):
         
         self.current_tool = Tool.SELECT
         self.current_color = QColor(self.cfg.get("drawing_color", "#ff0000"))
-        self.tool_sizes = {
+        self._tool_default_sizes = {
             Tool.PENCIL: 3,
             Tool.RECTANGLE: 3,
             Tool.LINE: 3,
@@ -115,6 +119,7 @@ class OverlayWindow(QWidget):
             Tool.HIGHLIGHT: 20,
             Tool.TEXT: 24
         }
+        self.tool_sizes = dict(self._tool_default_sizes)
         
         self.is_drawing = False
         self.is_dragging = False
@@ -144,6 +149,24 @@ class OverlayWindow(QWidget):
         
         self.color_rects = {}
         
+    def _warmup_render(self):
+        """Pre-warm QPainter, fonts and emoji glyphs so toolbar appears instantly on first use."""
+        try:
+            warmup = QPixmap(200, 200)
+            warmup.fill(Qt.GlobalColor.transparent)
+            p = QPainter(warmup)
+            f = p.font()
+            f.setPixelSize(18)
+            p.setFont(f)
+            p.setPen(Qt.GlobalColor.white)
+            for glyph in ["📷", "📋", "📌", "✏️", "🔵",
+                           "➡️", "⬜", "🟡", "💧", "T", "↩️",
+                           "🖨", "📸", "🔍", "A", "B"]:
+                p.drawText(QRect(0, 0, 200, 200), Qt.AlignmentFlag.AlignCenter, glyph)
+            p.end()
+        except Exception:
+            pass
+
     def _take_full_screenshot(self):
         try:
             with mss.mss() as sct:
@@ -274,26 +297,6 @@ class OverlayWindow(QWidget):
             painter.drawRect(rect)
             
             self._draw_toolbars(painter, rect)
-            if getattr(self, "show_brush_preview", False) and hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
-                size = self.tool_sizes[self.current_tool]
-                painter.setPen(Qt.PenStyle.NoPen)
-                preview_color = QColor(self.current_color)
-                preview_color.setAlpha(180)
-                painter.setBrush(QBrush(preview_color))
-                painter.drawEllipse(self.last_mouse_pos, size // 2, size // 2)
-                
-                # Draw a thin white border around the preview so it's visible on same-colored backgrounds
-                painter.setPen(QPen(Qt.GlobalColor.white, 1))
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.drawEllipse(self.last_mouse_pos, size // 2, size // 2)
-                
-                # Also write the size text above it
-                painter.setPen(QPen(Qt.GlobalColor.white))
-                font = painter.font()
-                font.setPixelSize(14)
-                painter.setFont(font)
-                text_rect = QRect(self.last_mouse_pos.x() - 50, self.last_mouse_pos.y() - (size // 2) - 20, 100, 20)
-                painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, f"{size}px")
 
 
     def _draw_pencil(self, pos):
@@ -424,7 +427,7 @@ class OverlayWindow(QWidget):
         self.show_brush_preview = True
         self.update()
         from PyQt6.QtCore import QTimer
-        QTimer.singleShot(1000, self._hide_brush_preview)
+        QTimer.singleShot(1500, self._hide_brush_preview)
         
     def _hide_brush_preview(self):
         self.show_brush_preview = False
