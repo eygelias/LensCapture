@@ -41,31 +41,6 @@ class DraggableTextEdit(QTextEdit):
             self.drag_pos = event.pos()
         super().mousePressEvent(event)
 
-    def wheelEvent(self, event):
-        if hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
-            delta = event.angleDelta().y()
-            current_size = self.tool_sizes[self.current_tool]
-            
-            if delta > 0:
-                current_size += max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
-            else:
-                current_size -= max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
-                
-            min_size = 1
-            if self.current_tool == Tool.TEXT: min_size = 8
-            if self.current_tool == Tool.HIGHLIGHT: min_size = 5
-            
-            self.tool_sizes[self.current_tool] = max(min_size, min(current_size, 150))
-            
-            if self.current_tool == Tool.TEXT and getattr(self, "active_text_editor", None):
-                editor = self.active_text_editor
-                font = editor.font()
-                font.setPixelSize(self.tool_sizes[Tool.TEXT])
-                editor.setFont(font)
-                editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
-                
-            self.update()
-
     def mouseMoveEvent(self, event):
         if getattr(self, "is_dragging", False):
             self.move(self.mapToParent(event.pos() - self.drag_pos))
@@ -127,6 +102,8 @@ class OverlayWindow(QWidget):
         self.drawing_pixmap.fill(Qt.GlobalColor.transparent)
         
         self.undo_stack = []
+        self.last_mouse_pos = QPoint(0, 0)
+        self.show_brush_preview = False
         
         self.current_tool = Tool.SELECT
         self.current_color = QColor(self.cfg.get("drawing_color", "#ff0000"))
@@ -209,7 +186,7 @@ class OverlayWindow(QWidget):
                     font.setPixelSize(self.tool_sizes[Tool.TEXT])
                     editor.setFont(font)
                     editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
-                self.update()
+                self._trigger_brush_preview()
         elif event.key() == Qt.Key.Key_Minus:
             if hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
                 current_size = self.tool_sizes[self.current_tool]
@@ -224,7 +201,7 @@ class OverlayWindow(QWidget):
                     font.setPixelSize(self.tool_sizes[Tool.TEXT])
                     editor.setFont(font)
                     editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
-                self.update()
+                self._trigger_brush_preview()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Z:
                 self._undo()
@@ -297,6 +274,27 @@ class OverlayWindow(QWidget):
             painter.drawRect(rect)
             
             self._draw_toolbars(painter, rect)
+            if getattr(self, "show_brush_preview", False) and hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
+                size = self.tool_sizes[self.current_tool]
+                painter.setPen(Qt.PenStyle.NoPen)
+                preview_color = QColor(self.current_color)
+                preview_color.setAlpha(180)
+                painter.setBrush(QBrush(preview_color))
+                painter.drawEllipse(self.last_mouse_pos, size // 2, size // 2)
+                
+                # Draw a thin white border around the preview so it's visible on same-colored backgrounds
+                painter.setPen(QPen(Qt.GlobalColor.white, 1))
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawEllipse(self.last_mouse_pos, size // 2, size // 2)
+                
+                # Also write the size text above it
+                painter.setPen(QPen(Qt.GlobalColor.white))
+                font = painter.font()
+                font.setPixelSize(14)
+                painter.setFont(font)
+                text_rect = QRect(self.last_mouse_pos.x() - 50, self.last_mouse_pos.y() - (size // 2) - 20, 100, 20)
+                painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, f"{size}px")
+
 
     def _draw_pencil(self, pos):
         painter = QPainter(self.drawing_pixmap)
@@ -422,6 +420,41 @@ class OverlayWindow(QWidget):
                 font.setPixelSize(18)
                 painter.setFont(font)
                 painter.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, name)
+    def _trigger_brush_preview(self):
+        self.show_brush_preview = True
+        self.update()
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(1000, self._hide_brush_preview)
+        
+    def _hide_brush_preview(self):
+        self.show_brush_preview = False
+        self.update()
+
+    def wheelEvent(self, event):
+        if hasattr(self, "current_tool") and self.current_tool in self.tool_sizes:
+            delta = event.angleDelta().y()
+            current_size = self.tool_sizes[self.current_tool]
+            
+            if delta > 0:
+                current_size += max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
+            else:
+                current_size -= max(1, current_size // 10) if self.current_tool == Tool.TEXT else 2
+                
+            min_size = 1
+            if self.current_tool == Tool.TEXT: min_size = 8
+            if self.current_tool == Tool.HIGHLIGHT: min_size = 5
+            
+            self.tool_sizes[self.current_tool] = max(min_size, min(current_size, 150))
+            
+            if self.current_tool == Tool.TEXT and getattr(self, "active_text_editor", None):
+                editor = self.active_text_editor
+                font = editor.font()
+                font.setPixelSize(self.tool_sizes[Tool.TEXT])
+                editor.setFont(font)
+                editor.setStyleSheet(f"background: transparent; color: {self.current_color.name()}; border: 1px dashed gray; font-size: {self.tool_sizes[Tool.TEXT]}px; font-family: Arial;")
+                
+            self._trigger_brush_preview()
+
     def set_tool(self, tool_id):
         self.current_tool = tool_id
         if tool_id == Tool.SELECT:
@@ -558,6 +591,7 @@ class OverlayWindow(QWidget):
 
     def mouseMoveEvent(self, event):
         pos = event.pos()
+        self.last_mouse_pos = pos
         from PyQt6.QtWidgets import QToolTip
         tooltip_text = ""
         if hasattr(self, "btn_translate_rect"):
