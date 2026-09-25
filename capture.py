@@ -224,6 +224,13 @@ class OverlayWindow(QWidget):
             
             self._draw_toolbars(painter, rect)
 
+    def _draw_pencil(self, pos):
+        painter = QPainter(self.drawing_pixmap)
+        pen = QPen(self.current_color, 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.drawLine(self.draw_last_point, pos)
+        painter.end()
+
     def _draw_toolbars(self, painter, rect):
         font = painter.font()
         font.setBold(True)
