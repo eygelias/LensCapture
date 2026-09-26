@@ -422,12 +422,28 @@ class OverlayWindow(QWidget):
                 
                 font.setPixelSize(18)
                 painter.setFont(font)
-                painter.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, name)
+                
+                if (is_active and getattr(self, 'show_brush_preview', False)
+                        and tid in getattr(self, 'tool_sizes', {})
+                        and tid in getattr(self, '_tool_default_sizes', {})):
+                    default_sz = self._tool_default_sizes[tid]
+                    current_sz = self.tool_sizes[tid]
+                    pct = int(round(current_sz / default_sz * 100))
+                    pct_font = painter.font()
+                    pct_font.setPixelSize(14)
+                    pct_font.setBold(True)
+                    painter.setFont(pct_font)
+                    painter.setPen(QColor(255, 255, 200, 255))
+                    painter.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, str(pct) + '%')
+                    painter.setFont(font)
+                    painter.setPen(Qt.GlobalColor.white)
+                else:
+                    painter.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, name)
     def _trigger_brush_preview(self):
         self.show_brush_preview = True
         self.update()
         from PyQt6.QtCore import QTimer
-        QTimer.singleShot(1500, self._hide_brush_preview)
+        QTimer.singleShot(1000, self._hide_brush_preview)
         
     def _hide_brush_preview(self):
         self.show_brush_preview = False
