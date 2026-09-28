@@ -1,5 +1,17 @@
 ﻿# LensCapture
 
+<div align="center">
+  <img src="assets/feature_translation.jpg" width="800" alt="Traducción Instantánea">
+  <br>
+  <br>
+  <img src="assets/feature_tools_pin.jpg" width="800" alt="Herramientas y Pin">
+  <br>
+  <br>
+  <img src="assets/feature_ai_ocr.jpg" width="800" alt="Inteligencia Artificial y OCR">
+</div>
+<br>
+
+
 LensCapture es una herramienta de recorte de pantalla y productividad para Windows, construida con Python y PyQt6. Integra funciones de Inteligencia Artificial como traducción instantánea (usando Google Gemini), extracción de texto (OCR), y búsqueda visual en Google Lens.
 
 ## 🚀 Características Principales
@@ -20,13 +32,15 @@ Si eres un agente de IA y debes modificar, mantener o recrear este código, aqu�
 4.  **config.py:** Lee y escribe la configuración en un archivo JSON local en %APPDATA%\LensCapture.
 5.  **gemini_client.py:** Cliente para la API de google-genai. Soporta OCR y Traducción enviando la imagen en Base64 junto a prompts predefinidos.
 6.  **imgur_client.py:** Cliente para subir imágenes temporalmente a Imgur. Genera la URL pública que necesita Google Lens para funcionar.
-7.  **esult_window.py:** Ventana flotante que muestra los resultados de Gemini. Usa QTextBrowser para soportar renderizado Markdown parcial.
+7.  **
+esult_window.py:** Ventana flotante que muestra los resultados de Gemini. Usa QTextBrowser para soportar renderizado Markdown parcial.
 8.  **pin_window.py:** Crea ventanas frameless, siempre visibles (WindowStaysOnTopHint), que muestran imágenes recortadas (QPixmap) y se pueden arrastrar o cerrar.
 9.  **installer_wizard.py:** Código del instalador "Custom". Extrae la carpeta dist/LensCapture generada por PyInstaller, la copia a AppData\Local\LensCapture, genera accesos directos (winshell, win32com) en el Menú Inicio y Escritorio, y ejecuta la app de forma silenciosa al finalizar.
 
 ## 🛠️ Requisitos de Desarrollo
 
-Instala las dependencias usando el archivo equirements.txt:
+Instala las dependencias usando el archivo 
+equirements.txt:
 \\\ash
 pip install -r requirements.txt
 \\\
