@@ -1,6 +1,9 @@
 ﻿# LensCapture
 
 <div align="center">
+  <img src="assets/ui_preview_hd.jpg" width="800" alt="LensCapture Interface">
+  <br>
+  <br>
   <img src="assets/feature_translation.jpg" width="800" alt="Traducción Instantánea">
   <br>
   <br>
