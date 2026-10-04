@@ -64,3 +64,7 @@ Toma la carpeta generada en la Fase 1 y la empaqueta dentro de un solo archivo e
 pyinstaller --noconfirm --clean --onefile --windowed --name "Instalador_LensCapture" --icon "icon.ico" --uac-admin --add-data "icon.ico;." --add-data "dist/LensCapture;LensCapture" installer_wizard.py
 \\\
 El archivo final \Instalador_LensCapture.exe\ quedará en la carpeta \dist/\.
+
+
+---
+**SEO Tags:** $tags
